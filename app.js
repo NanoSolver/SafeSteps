@@ -219,6 +219,7 @@ async function render(moveFocus = false) {
   const hash = location.hash.slice(1);
   const contact = hash.startsWith("check-in/");
   const page = contact ? "walk" : Object.hasOwn(pages, hash) ? hash : "home";
+  window.dispatchEvent(new Event("safesteps:navigate"));
   document.title = page === "home" ? "SafeStride — " + pages.home : pages[page] + " — SafeStride";
   if (contact) {
     header.innerHTML = "";
