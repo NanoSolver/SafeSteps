@@ -8,6 +8,8 @@ const { join } = require("node:path");
 const { Readable } = require("node:stream");
 const { createApp } = require("./server");
 const { createMapServices } = require("./map-services");
+const { hosted, unavailable } = require("./storage");
+const { createHandler } = require("./api/backend");
 
 function client(app, session = "") {
   return async (url, { method = "GET", data, token, origin } = {}) => {
@@ -166,5 +168,40 @@ test("street map searches and routes accept geographic points beyond demo landma
     assert.equal((await guest("/api/map/walk", post({ from, to }))).status, 429);
   } finally {
     app.close();
+  }
+});
+
+test("Vercel rewrites reach the same APIs and check-ins share hosted storage across instances", async () => {
+  const { DatabaseSync } = require("node:sqlite");
+  const db = new DatabaseSync(":memory:");
+  const remote = {
+    async batch(statements, mode) {
+      assert.equal(mode, "write");
+      db.exec(statements.join(";"));
+    },
+    async execute({ sql, args }) {
+      return { rows: db.prepare(sql).all(...args) };
+    }
+  };
+  function rewrite(path) {
+    return "/api/backend?vercelPath=" + encodeURIComponent(path);
+  }
+  try {
+    const walker = client({ handle: createHandler(hosted(remote)) });
+    const contact = client({ handle: createHandler(hosted(remote)) });
+    const account = await walker(rewrite("register"), post(credentials));
+    assert.equal(account.status, 201);
+    assert.match(account.headers["set-cookie"], /; Secure$/);
+    const started = await walker(rewrite("walk"), post({ minutes: 15 }));
+    assert.equal(started.status, 201);
+    const { id, token } = started.body.walk;
+    assert.equal((await contact(rewrite("contact"), { token })).body.status, "walking");
+    assert.equal((await walker(rewrite(`walk/${id}/arrive`), post())).status, 200);
+    assert.equal((await contact(rewrite("contact"), { token })).body.status, "arrived");
+    const noDatabase = client({ handle: createHandler(unavailable()) });
+    assert.equal((await noDatabase(rewrite("session"))).status, 200);
+    assert.equal((await noDatabase(rewrite("community"))).status, 503);
+  } finally {
+    db.close();
   }
 });

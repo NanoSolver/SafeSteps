@@ -4,7 +4,7 @@ SafeStride is a college prototype for planning local walks and checking in with 
 
 ## Run it
 
-Use Node.js 24 or newer. From this folder, run:
+Use Node.js 24 LTS. From this folder, run:
 
 ```powershell
 node server.js
@@ -28,6 +28,15 @@ Signed-in users can pin hazards and havens anywhere and confirm someone else’s
 ## Street map
 
 The map needs internet access. Leaflet displays attributed OpenStreetMap tiles. Search requests go to the Photon demo geocoder, and route coordinates go to the FOSSGIS pedestrian router. These public services are for light demo use and do not guarantee availability. Search runs on explicit submission only, and the server limits each upstream service to about one request per second. Set `SAFESTRIDE_GEOCODER` or `SAFESTRIDE_ROUTER` to replace those endpoints with Photon- and OSRM-compatible services.
+
+## Deploy on Vercel
+
+1. In Turso, create a database and generate a write-capable database token. The app creates its tables on first use.
+2. In the Vercel project, add `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` under **Settings → Environment Variables** for the environment being deployed. Keep the token in Vercel.
+3. Deploy from the repository root. `vercel.json` configures the build output and rewrites `/api/*` to a Node.js function. `package.json` pins Node.js 24.
+4. Verify the hosted home page, then create a demo account and open a check-in link in a separate browser session.
+
+The Vercel database starts empty. Local SQLite data remains in `.safestride/`. Deployments missing the database settings can serve the site and map routes. Storage endpoints return HTTP 503 until the database is connected.
 
 The contact page provides status updates while it is open. SMS, push and background notification delivery are outside this local implementation.
 

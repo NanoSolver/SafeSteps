@@ -1,1 +1,5 @@
 /.safestride/
+/node_modules/
+/public/
+/.vercel/
+/.env*

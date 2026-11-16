@@ -3,9 +3,10 @@
 const { createServer } = require("node:http");
 const { createHash, randomBytes, scrypt, timingSafeEqual } = require("node:crypto");
 const { promisify } = require("node:util");
-const { readFileSync, mkdirSync } = require("node:fs");
-const { dirname, join } = require("node:path");
-const { DatabaseSync } = require("node:sqlite");
+const { readFileSync } = require("node:fs");
+const { join } = require("node:path");
+const { sqlite, StorageUnavailable } = require("./storage");
+const { headers: publicHeaders } = require("./vercel.json");
 const { places } = require("./routes");
 const { createMapServices, coordinate, MapError } = require("./map-services");
 
@@ -69,55 +70,8 @@ async function readJson(req) {
   }
 }
 
-function createApp({ database = ":memory:", now = Date.now, secureCookie = false, maps = createMapServices() } = {}) {
-  if (database !== ":memory:") mkdirSync(dirname(database), { recursive: true });
-  const db = new DatabaseSync(database);
-  db.exec(`
-    PRAGMA journal_mode = WAL;
-    PRAGMA foreign_keys = ON;
-    PRAGMA busy_timeout = 5000;
-    CREATE TABLE IF NOT EXISTS accounts (
-      id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL,
-      salt TEXT NOT NULL, password_hash TEXT NOT NULL
-    ) STRICT;
-    CREATE TABLE IF NOT EXISTS sessions (
-      token_hash TEXT PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id),
-      expires_at INTEGER NOT NULL
-    ) STRICT;
-    CREATE TABLE IF NOT EXISTS walks (
-      id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id),
-      share_token TEXT NOT NULL UNIQUE, started_at INTEGER NOT NULL, due_at INTEGER NOT NULL,
-      expires_at INTEGER NOT NULL, arrived_at INTEGER, revoked_at INTEGER
-    ) STRICT;
-    CREATE UNIQUE INDEX IF NOT EXISTS one_active_walk
-      ON walks(account_id) WHERE arrived_at IS NULL AND revoked_at IS NULL;
-    CREATE TABLE IF NOT EXISTS reports (
-      id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id),
-      type TEXT NOT NULL, place TEXT NOT NULL, created_at INTEGER NOT NULL
-    ) STRICT;
-    CREATE TABLE IF NOT EXISTS confirmations (
-      report_id INTEGER NOT NULL REFERENCES reports(id), account_id INTEGER NOT NULL REFERENCES accounts(id),
-      PRIMARY KEY (report_id, account_id)
-    ) STRICT;
-    CREATE TABLE IF NOT EXISTS havens (
-      id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id),
-      name TEXT NOT NULL, type TEXT NOT NULL, place TEXT NOT NULL
-    ) STRICT;
-  `);
-  db.exec("BEGIN IMMEDIATE");
-  try {
-    for (const table of ["reports", "havens"]) {
-      const columns = db.prepare(`PRAGMA table_info(${table})`).all();
-      for (const name of ["lat", "lon"]) {
-        if (!columns.some(column => column.name === name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} REAL`);
-      }
-    }
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    db.close();
-    throw error;
-  }
+function createApp({ database = ":memory:", store, now = Date.now, secureCookie = false, maps = createMapServices() } = {}) {
+  const db = store ?? sqlite(database);
   const attempts = new Map();
 
   function setSessionCookie(res, token, maxAge) {
@@ -129,13 +83,13 @@ function createApp({ database = ":memory:", now = Date.now, secureCookie = false
     return part?.slice(cookie.length + 1) ?? "";
   }
 
-  function account(req) {
+  async function account(req) {
     const token = sessionToken(req);
     if (!tokenPattern.test(token)) return null;
-    return db.prepare(`
+    return await db.get(`
       SELECT accounts.id, accounts.display_name AS displayName FROM sessions
       JOIN accounts ON accounts.id = sessions.account_id WHERE token_hash = ? AND expires_at > ?
-    `).get(hash(token), now()) ?? null;
+    `, hash(token), now()) ?? null;
   }
 
   async function authenticate(req, res, register) {
@@ -156,15 +110,15 @@ function createApp({ database = ":memory:", now = Date.now, secureCookie = false
     if (!/^[a-z0-9_.-]{3,32}$/.test(username) || password.length < 10 || password.length > 128) {
       throw new HttpError(400, "Use a 3–32 character username and a 10–128 character password.");
     }
-    let user = db.prepare("SELECT * FROM accounts WHERE username = ?").get(username);
+    let user = await db.get("SELECT * FROM accounts WHERE username = ?", username);
     if (register) {
       if (!displayName) throw new HttpError(400, "Enter a display name.");
       const salt = randomBytes(16).toString("hex");
       const passwordHash = (await derive(password, salt, 64)).toString("hex");
-      user = db.prepare(`
+      user = await db.get(`
         INSERT INTO accounts (username, display_name, salt, password_hash) VALUES (?, ?, ?, ?)
         ON CONFLICT(username) DO NOTHING RETURNING *
-      `).get(username, displayName, salt, passwordHash);
+      `, username, displayName, salt, passwordHash);
       if (!user) throw new HttpError(409, "That username is already in use.");
     } else {
       const expected = Buffer.from(user?.password_hash ?? "0".repeat(128), "hex");
@@ -172,11 +126,11 @@ function createApp({ database = ":memory:", now = Date.now, secureCookie = false
       if (!timingSafeEqual(candidate, expected) || !user) throw new HttpError(401, "Username or password is incorrect.");
     }
     if (tokenPattern.test(sessionToken(req))) {
-      db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(hash(sessionToken(req)));
+      await db.run("DELETE FROM sessions WHERE token_hash = ?", hash(sessionToken(req)));
     }
-    db.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(now());
+    await db.run("DELETE FROM sessions WHERE expires_at <= ?", now());
     const token = randomBytes(32).toString("hex");
-    db.prepare("INSERT INTO sessions VALUES (?, ?, ?)").run(hash(token), user.id, now() + sessionDuration);
+    await db.run("INSERT INTO sessions VALUES (?, ?, ?)", hash(token), user.id, now() + sessionDuration);
     setSessionCookie(res, token, sessionDuration / 1000);
     json(res, register ? 201 : 200, { account: { id: user.id, displayName: user.display_name } });
   }
@@ -189,8 +143,8 @@ function createApp({ database = ":memory:", now = Date.now, secureCookie = false
     };
   }
 
-  function latestWalk(id) {
-    const row = db.prepare("SELECT * FROM walks WHERE account_id = ? ORDER BY id DESC LIMIT 1").get(id);
+  async function latestWalk(id) {
+    const row = await db.get("SELECT * FROM walks WHERE account_id = ? ORDER BY id DESC LIMIT 1", id);
     return row && row.revoked_at === null && row.expires_at > now() ? row : null;
   }
 
@@ -205,9 +159,7 @@ function createApp({ database = ":memory:", now = Date.now, secureCookie = false
   }
 
   async function handle(req, res) {
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net; img-src 'self' data: https://tile.openstreetmap.org https://cdn.jsdelivr.net; font-src https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    for (const { key, value } of publicHeaders[0].headers) res.setHeader(key, value);
     try {
       const path = new URL(req.url, "http://localhost").pathname;
       const get = req.method === "GET";
@@ -230,46 +182,46 @@ function createApp({ database = ":memory:", now = Date.now, secureCookie = false
       if (post && path === "/api/login") return await authenticate(req, res, false);
       if (post && path === "/api/map/search") return json(res, 200, { results: await maps.search(await readJson(req)) });
       if (post && path === "/api/map/walk") return json(res, 200, { routes: await maps.walking(await readJson(req)) });
-      const user = account(req);
+      const user = await account(req);
       if (get && path === "/api/session") return json(res, 200, { account: user });
       if (get && path === "/api/community") {
-        const reports = db.prepare(`
+        const reports = await db.all(`
           SELECT r.id, r.type, r.place, r.lat, r.lon, r.created_at AS createdAt,
             (r.account_id = ?) AS own, COUNT(c.account_id) AS confirmations,
             COALESCE(MAX(c.account_id = ?), 0) AS confirmed
           FROM reports r LEFT JOIN confirmations c ON r.id = c.report_id GROUP BY r.id ORDER BY r.id DESC
-        `).all(user?.id ?? 0, user?.id ?? 0);
-        const havens = db.prepare("SELECT id, name, type, place, lat, lon FROM havens ORDER BY id DESC").all();
+        `, user?.id ?? 0, user?.id ?? 0);
+        const havens = await db.all("SELECT id, name, type, place, lat, lon FROM havens ORDER BY id DESC");
         return json(res, 200, { reports: reports.map(communityLocation), havens: havens.map(communityLocation) });
       }
       if (get && path === "/api/contact") {
         const token = req.headers.authorization?.replace(/^Bearer /, "") ?? "";
-        const row = tokenPattern.test(token) && db.prepare(`
+        const row = tokenPattern.test(token) && await db.get(`
           SELECT walks.*, accounts.display_name FROM walks JOIN accounts ON accounts.id = walks.account_id
           WHERE share_token = ? AND revoked_at IS NULL AND walks.expires_at > ?
-        `).get(token, now());
+        `, token, now());
         if (!row) throw new HttpError(404, "This check-in link has expired or was closed.");
         return json(res, 200, { ...publicWalk(row), displayName: row.display_name });
       }
       if (!user) throw new HttpError(401, "Sign in to continue.");
       if (post && path === "/api/logout") {
-        db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(hash(sessionToken(req)));
+        await db.run("DELETE FROM sessions WHERE token_hash = ?", hash(sessionToken(req)));
         setSessionCookie(res, "", 0);
         return json(res, 200, {});
       }
-      if (get && path === "/api/walk") return json(res, 200, { walk: ownerWalk(latestWalk(user.id)) });
+      if (get && path === "/api/walk") return json(res, 200, { walk: ownerWalk(await latestWalk(user.id)) });
       if (post && path === "/api/walk") {
         const { minutes } = await readJson(req);
         if (!Number.isInteger(minutes) || minutes < 1 || minutes > 180) {
           throw new HttpError(400, "Choose an ETA from 1 to 180 minutes.");
         }
         const time = now();
-        db.prepare("DELETE FROM walks WHERE expires_at <= ?").run(time);
+        await db.run("DELETE FROM walks WHERE expires_at <= ?", time);
         const due = time + minutes * 60 * 1000;
-        const row = db.prepare(`
+        const row = await db.get(`
           INSERT INTO walks (account_id, share_token, started_at, due_at, expires_at)
           VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING RETURNING *
-        `).get(user.id, randomBytes(32).toString("hex"), time, due, due + 24 * hour);
+        `, user.id, randomBytes(32).toString("hex"), time, due, due + 24 * hour);
         if (!row) throw new HttpError(409, "Finish or close your current walk before starting another.");
         return json(res, 201, { walk: ownerWalk(row) });
       }
@@ -277,16 +229,18 @@ function createApp({ database = ":memory:", now = Date.now, secureCookie = false
       if (post && walkAction) {
         const id = Number(walkAction[1]);
         const time = now();
-        const row = db.prepare("SELECT * FROM walks WHERE id = ? AND account_id = ? AND expires_at > ?")
-          .get(id, user.id, time);
+        const row = await db.get("SELECT * FROM walks WHERE id = ? AND account_id = ? AND expires_at > ?", id, user.id, time);
         if (!row) throw new HttpError(404, "Walk not found.");
         if (walkAction[2] === "close") {
-          db.prepare("UPDATE walks SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ?").run(time, id);
+          await db.run("UPDATE walks SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ?", time, id);
           return json(res, 200, { walk: null });
         }
         if (row.revoked_at !== null) throw new HttpError(409, "This walk is closed.");
-        const arrived = db.prepare("UPDATE walks SET arrived_at = COALESCE(arrived_at, ?) WHERE id = ? RETURNING *")
-          .get(time, id);
+        const arrived = await db.get(
+          "UPDATE walks SET arrived_at = COALESCE(arrived_at, ?) WHERE id = ? AND revoked_at IS NULL RETURNING *",
+          time, id
+        );
+        if (!arrived) throw new HttpError(409, "This walk is closed.");
         return json(res, 200, { walk: ownerWalk(arrived) });
       }
       if (post && (path === "/api/reports" || path === "/api/havens")) {
@@ -297,26 +251,28 @@ function createApp({ database = ":memory:", now = Date.now, secureCookie = false
         if ((!pinned && !legacy) || !(report ? reportTypes : havenTypes).includes(type)) throw new HttpError(400, "Choose a category and a valid map point.");
         const position = pinned ? ["", lat, lon] : [place, null, null];
         if (report) {
-          db.prepare("INSERT INTO reports (account_id, type, created_at, place, lat, lon) VALUES (?, ?, ?, ?, ?, ?)")
-            .run(user.id, type, now(), ...position);
+          await db.run("INSERT INTO reports (account_id, type, created_at, place, lat, lon) VALUES (?, ?, ?, ?, ?, ?)", user.id, type, now(), ...position);
         } else {
           const name = text(rawName, 70);
           if (!name) throw new HttpError(400, "Enter a haven name.");
-          db.prepare("INSERT INTO havens (account_id, name, type, place, lat, lon) VALUES (?, ?, ?, ?, ?, ?)").run(user.id, name, type, ...position);
+          await db.run("INSERT INTO havens (account_id, name, type, place, lat, lon) VALUES (?, ?, ?, ?, ?, ?)", user.id, name, type, ...position);
         }
         return json(res, 201, {});
       }
       const confirmation = /^\/api\/reports\/(\d+)\/confirm$/.exec(path);
       if (post && confirmation) {
         const id = Number(confirmation[1]);
-        const report = db.prepare("SELECT account_id FROM reports WHERE id = ?").get(id);
+        const report = await db.get("SELECT account_id FROM reports WHERE id = ?", id);
         if (!report) throw new HttpError(404, "Report not found.");
         if (report.account_id === user.id) throw new HttpError(409, "Another account must confirm your report.");
-        db.prepare("INSERT INTO confirmations VALUES (?, ?) ON CONFLICT DO NOTHING").run(id, user.id);
+        await db.run("INSERT INTO confirmations VALUES (?, ?) ON CONFLICT DO NOTHING", id, user.id);
         return json(res, 200, {});
       }
       throw new HttpError(404, "Page not found.");
     } catch (error) {
+      if (error instanceof StorageUnavailable) {
+        return json(res, 503, { error: "Account and community storage is temporarily unavailable." });
+      }
       if (!(error instanceof HttpError || error instanceof MapError)) console.error(error);
       if (res.headersSent) return res.end();
       json(res, error.status ?? 500, { error: error.status ? error.message : "SafeStride couldn't complete the request." });
@@ -337,4 +293,4 @@ if (require.main === module) {
   server.listen(port, host, () => console.log(`SafeStride listening on http://${host}:${server.address().port}`));
 }
 
-module.exports = { createApp };
+module.exports = { createApp, staticFiles: [...new Set([...files.values()].map(([file]) => file))] };
