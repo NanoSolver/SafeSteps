@@ -1,0 +1,53 @@
+<template><style>
+*{box-sizing:border-box}body{margin:0}#root{position:absolute;inset:0;font-family:Inter,sans-serif;color:#1b2a23}
+.ground{position:absolute;inset:0;background:#e3f1e9}.paper{background:#f6f8f7}
+.brand{font:700 40px 'Playfair Display',serif;display:flex;align-items:center;gap:16px}
+.mark{width:58px;height:58px;background:#2c624b;color:#fff;border-radius:15px;display:grid;place-items:center;font:700 34px Inter}
+.eyebrow{font:700 29px Inter;color:#2c624b;letter-spacing:2px}
+h1,h2,p{margin:0}h1{font:700 103px/1.13 'Playfair Display',serif;letter-spacing:-3px}h2{font:700 43px/1.2 Inter}
+.muted{color:#53625b}.small{font:400 30px/1.5 Inter}.bold{font-weight:700}
+.green{color:#2c624b}.button{border:0;border-radius:12px;background:#2c624b;color:white;padding:23px 33px;font:700 30px Inter;display:inline-block}
+.card{background:#fff;border:2px solid #d8e0db;border-radius:22px;padding:34px}
+.head{position:absolute;left:120px;top:85px}.sub{font:400 33px/1.5 Inter;color:#53625b;margin-top:21px}
+.window{position:absolute;left:120px;top:260px;width:1680px;height:700px;border:2px solid #c8d6ce;border-radius:22px;background:white;overflow:hidden}
+.bar{height:74px;border-bottom:2px solid #d8e0db;padding:13px 27px;display:flex;justify-content:space-between;align-items:center;background:#fff}
+.bar .brand{font-size:31px}.bar .mark{width:43px;height:43px;font-size:25px;border-radius:10px}
+.bar-label{font:400 27px Inter;color:#53625b}.sidebar{position:absolute;left:0;top:74px;bottom:0;width:430px;border-right:2px solid #d8e0db;padding:28px;background:#fff;z-index:3}
+.sidebar h2{font-size:35px;margin-bottom:24px}.field{border:2px solid #d8e0db;border-radius:12px;padding:17px 12px;font:400 28px Inter;margin:12px 0;white-space:nowrap}
+.dot{display:inline-grid;place-items:center;width:33px;height:33px;border-radius:50%;font-size:23px;color:#fff;background:#2964df;margin-right:9px}.dot.red{background:#b73f45}
+.routecards{display:flex;gap:10px;margin-top:25px}.routecard{border:2px solid #b1c7f8;border-radius:12px;background:#edf3ff;padding:15px 12px;width:50%;font:400 27px Inter}.routecard strong{font-size:35px;display:block;margin:8px 0}
+.routecard.alt{background:#fff;border-color:#d8e0db}.blue-button{margin-top:20px;background:#2964df;width:100%;text-align:center;font-size:27px;padding:19px 10px}
+.map{position:absolute;left:430px;top:74px;width:1250px;height:626px;background:#e9ede6;overflow:hidden}
+.map svg{position:absolute;inset:0;width:100%;height:100%}.maplabel{position:absolute;font:400 26px Inter;color:#53625b;background:#e9ede6e8;padding:3px 7px;border-radius:5px}
+.maptag{position:absolute;right:22px;bottom:18px;font:400 24px Inter;background:white;padding:7px 10px;border-radius:8px;color:#53625b}
+.pin{position:absolute;display:grid;place-items:center;width:54px;height:54px;border:4px solid white;border-radius:50%;background:#2964df;color:#fff;font:700 30px Inter;box-shadow:0 3px 8px #0003}
+.pin.destination{background:#b73f45}.pin.hazard{background:#a04d15}
+#root *{font-family:Arial,sans-serif}#root h1,#root .brand{font-family:Georgia,serif}#root .sidebar h2{font-family:Arial,sans-serif}
+</style>
+<div id="root" data-composition-id="routes" data-width="1920" data-height="1080"><div class="ground paper"></div><div class="head"><h1>Pick your way home.</h1></div><div class="window" id="app-window"><div class="bar"><div class="brand"><span class="mark">♧</span>SafeStride</div><span class="bar-label">Plan a walk &nbsp;&nbsp; Safe Havens &nbsp;&nbsp; Check-in</span></div>
+<div class="sidebar"><h2>Plan a walk</h2><div class="field"><span class="dot">A</span>Cubbon Park</div>
+<div class="field"><span class="dot red">B</span>MG Road Metro</div><div class="button blue-button">Find walking routes</div>
+<div class="routecards"><div class="routecard" id="fastest"><span>Fastest</span><strong>Route A</strong><span>Walking route</span></div>
+<div class="routecard alt" id="alternate"><span>Alternate</span><strong>Route B</strong><span>Walking route</span></div></div>
+<p class="small muted" style="font-size:27px;margin-top:20px">Choose your route.</p></div><div class="map">
+<svg viewBox="0 0 1250 626" aria-hidden="true">
+<path d="M70 0 L28 626" stroke="#d1d8cf" stroke-width="33"/><path d="M70 0 L28 626" stroke="#fff" stroke-width="24"/><path d="M250 0 L208 626" stroke="#d1d8cf" stroke-width="33"/><path d="M250 0 L208 626" stroke="#fff" stroke-width="24"/><path d="M430 0 L388 626" stroke="#d1d8cf" stroke-width="33"/><path d="M430 0 L388 626" stroke="#fff" stroke-width="24"/><path d="M610 0 L568 626" stroke="#d1d8cf" stroke-width="33"/><path d="M610 0 L568 626" stroke="#fff" stroke-width="24"/><path d="M790 0 L748 626" stroke="#d1d8cf" stroke-width="33"/><path d="M790 0 L748 626" stroke="#fff" stroke-width="24"/><path d="M970 0 L928 626" stroke="#d1d8cf" stroke-width="33"/><path d="M970 0 L928 626" stroke="#fff" stroke-width="24"/><path d="M1150 0 L1108 626" stroke="#d1d8cf" stroke-width="33"/><path d="M1150 0 L1108 626" stroke="#fff" stroke-width="24"/><path d="M0 70 L1250 25" stroke="#d1d8cf" stroke-width="30"/><path d="M0 70 L1250 25" stroke="#fff" stroke-width="22"/><path d="M0 175 L1250 130" stroke="#d1d8cf" stroke-width="30"/><path d="M0 175 L1250 130" stroke="#fff" stroke-width="22"/><path d="M0 280 L1250 235" stroke="#d1d8cf" stroke-width="30"/><path d="M0 280 L1250 235" stroke="#fff" stroke-width="22"/><path d="M0 385 L1250 340" stroke="#d1d8cf" stroke-width="30"/><path d="M0 385 L1250 340" stroke="#fff" stroke-width="22"/><path d="M0 490 L1250 445" stroke="#d1d8cf" stroke-width="30"/><path d="M0 490 L1250 445" stroke="#fff" stroke-width="22"/><path d="M0 595 L1250 550" stroke="#d1d8cf" stroke-width="30"/><path d="M0 595 L1250 550" stroke="#fff" stroke-width="22"/>
+<path d="M70 45L360 25L450 250L190 325L60 190Z" fill="#c5dcc4"/>
+<path d="M1080 10C1170 40 1220 110 1165 195C1090 223 1038 149 1080 10Z" fill="#b9d6de"/>
+<path d="M220 430L415 450L560 410L800 390L920 280L1050 197" fill="none" stroke="#839ab8" stroke-width="11" stroke-linejoin="round"/>
+<path d="M220 430 L325 382 L455 295 L620 285 L760 246 L890 268 L1050 197" fill="none" stroke="#fff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="route-line" d="M220 430 L325 382 L455 295 L620 285 L760 246 L890 268 L1050 197" fill="none" stroke="#2964df" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+<span class="maplabel" style="left:135px;top:135px">Cubbon Park</span>
+<span class="maplabel" style="left:605px;top:326px">Church Street</span>
+<span class="maplabel" style="left:905px;top:140px">MG Road</span>
+<span class="pin origin" style="left:193px;top:404px">A</span>
+<span class="pin destination" style="left:1024px;top:170px">B</span>
+<span class="maptag">Illustrative demo route</span></div></div></div>
+<script>const tl=gsap.timeline({paused:true});
+tl.fromTo("#app-window",{y:60,opacity:0},{y:0,opacity:1,duration:.45,ease:"power3.out"},0);
+tl.fromTo(".route-line",{strokeDasharray:1200,strokeDashoffset:1200},{strokeDashoffset:0,duration:1.5,ease:"power2.inOut"},.6);
+// beat-grid: route cards settle at 6.56s and 7.64s globally.
+tl.fromTo("#fastest",{opacity:0,y:20},{opacity:1,y:0,duration:.25},3.26);
+tl.fromTo("#alternate",{opacity:0,y:20},{opacity:1,y:0,duration:.25},4.34);
+window.__timelines["routes"]=tl;</script></template>

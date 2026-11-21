@@ -1,0 +1,40 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#e3f1e9}
+</style></head><body><style>
+*{box-sizing:border-box}body{margin:0}#root{position:absolute;inset:0;font-family:Inter,sans-serif;color:#1b2a23}
+.ground{position:absolute;inset:0;background:#e3f1e9}.paper{background:#f6f8f7}
+.brand{font:700 40px 'Playfair Display',serif;display:flex;align-items:center;gap:16px}
+.mark{width:58px;height:58px;background:#2c624b;color:#fff;border-radius:15px;display:grid;place-items:center;font:700 34px Inter}
+.eyebrow{font:700 29px Inter;color:#2c624b;letter-spacing:2px}
+h1,h2,p{margin:0}h1{font:700 103px/1.13 'Playfair Display',serif;letter-spacing:-3px}h2{font:700 43px/1.2 Inter}
+.muted{color:#53625b}.small{font:400 30px/1.5 Inter}.bold{font-weight:700}
+.green{color:#2c624b}.button{border:0;border-radius:12px;background:#2c624b;color:white;padding:23px 33px;font:700 30px Inter;display:inline-block}
+.card{background:#fff;border:2px solid #d8e0db;border-radius:22px;padding:34px}
+.head{position:absolute;left:120px;top:85px}.sub{font:400 33px/1.5 Inter;color:#53625b;margin-top:21px}
+.window{position:absolute;left:120px;top:260px;width:1680px;height:700px;border:2px solid #c8d6ce;border-radius:22px;background:white;overflow:hidden}
+.bar{height:74px;border-bottom:2px solid #d8e0db;padding:13px 27px;display:flex;justify-content:space-between;align-items:center;background:#fff}
+.bar .brand{font-size:31px}.bar .mark{width:43px;height:43px;font-size:25px;border-radius:10px}
+.bar-label{font:400 27px Inter;color:#53625b}.sidebar{position:absolute;left:0;top:74px;bottom:0;width:430px;border-right:2px solid #d8e0db;padding:28px;background:#fff;z-index:3}
+.sidebar h2{font-size:35px;margin-bottom:24px}.field{border:2px solid #d8e0db;border-radius:12px;padding:17px 12px;font:400 28px Inter;margin:12px 0;white-space:nowrap}
+.dot{display:inline-grid;place-items:center;width:33px;height:33px;border-radius:50%;font-size:23px;color:#fff;background:#2964df;margin-right:9px}.dot.red{background:#b73f45}
+.routecards{display:flex;gap:10px;margin-top:25px}.routecard{border:2px solid #b1c7f8;border-radius:12px;background:#edf3ff;padding:15px 12px;width:50%;font:400 27px Inter}.routecard strong{font-size:35px;display:block;margin:8px 0}
+.routecard.alt{background:#fff;border-color:#d8e0db}.blue-button{margin-top:20px;background:#2964df;width:100%;text-align:center;font-size:27px;padding:19px 10px}
+.map{position:absolute;left:430px;top:74px;width:1250px;height:626px;background:#e9ede6;overflow:hidden}
+.map svg{position:absolute;inset:0;width:100%;height:100%}.maplabel{position:absolute;font:400 26px Inter;color:#53625b;background:#e9ede6e8;padding:3px 7px;border-radius:5px}
+.maptag{position:absolute;right:22px;bottom:18px;font:400 24px Inter;background:white;padding:7px 10px;border-radius:8px;color:#53625b}
+.pin{position:absolute;display:grid;place-items:center;width:54px;height:54px;border:4px solid white;border-radius:50%;background:#2964df;color:#fff;font:700 30px Inter;box-shadow:0 3px 8px #0003}
+.pin.destination{background:#b73f45}.pin.hazard{background:#a04d15}
+#root *{font-family:Arial,sans-serif}#root h1,#root .brand{font-family:Georgia,serif}#root .sidebar h2{font-family:Arial,sans-serif}
+.check-panels{position:absolute;left:190px;top:410px;display:flex;align-items:center;gap:65px}.owner{width:655px;height:500px}.contact{position:relative;width:655px;height:420px}
+.check-panels h2{margin:22px 0}.check-panels .eyebrow{font-size:25px}.link-box{border:2px solid #d8e0db;border-radius:10px;padding:16px;font-size:28px;color:#53625b;margin:22px 0}.connector{font:400 65px Inter;color:#2c624b}
+.state{font:700 35px Inter;border-radius:12px;padding:18px 22px;display:inline-block;margin:15px 0 20px}.walking{background:#edf3ff;color:#2256a9}.arrived{background:#e3f1e9;color:#2c624b}
+#walking-state,#arrived-state{position:absolute;left:34px;top:160px}#arrived-state{opacity:0}#walking-state{opacity:1!important}#arrived-state{opacity:0!important}.demo-caption{position:absolute;left:190px;top:957px;color:#53625b;font:400 28px Inter}</style>
+<div id="root" data-composition-id="checkin" data-width="1920" data-height="1080"><div class="ground"></div><div class="head"><h1>Let someone know<br>you’re home.</h1></div>
+<div class="check-panels"><div class="card owner"><span class="eyebrow">YOUR WALK</span><h2>Trusted-contact<br>check-in</h2><p class="small muted">Expected check-in by 8:30 pm</p>
+<div class="link-box">Private contact link</div><div class="button" id="home-button">I’m home</div></div>
+<div class="connector" aria-hidden="true">→</div>
+<div class="card contact"><span class="eyebrow">YOUR CONTACT’S VIEW</span><h2>Demo Walker</h2>
+<div id="walking-state"><div class="state walking">Walk in progress</div><p class="small muted">ETA 8:30 pm · demo data</p></div>
+<div id="arrived-state"><div class="state arrived">✓ &nbsp; Arrived</div><p class="small muted">8:26 pm · demo data</p></div></div></div>
+<p class="demo-caption">Illustrative check-in</p></div>
+</body></html>

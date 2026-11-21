@@ -23,7 +23,8 @@ const schema = [
   `CREATE TABLE IF NOT EXISTS walks (
     id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id),
     share_token TEXT NOT NULL UNIQUE, started_at INTEGER NOT NULL, due_at INTEGER NOT NULL,
-    expires_at INTEGER NOT NULL, arrived_at INTEGER, revoked_at INTEGER
+    expires_at INTEGER NOT NULL, arrived_at INTEGER, revoked_at INTEGER,
+    location_lat REAL, location_lon REAL, location_updated_at INTEGER
   ) STRICT`,
   `CREATE UNIQUE INDEX IF NOT EXISTS one_active_walk
     ON walks(account_id) WHERE arrived_at IS NULL AND revoked_at IS NULL`,
@@ -55,6 +56,10 @@ function sqlite(database) {
         for (const name of ["lat", "lon"]) {
           if (!columns.some(column => column.name === name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} REAL`);
         }
+      }
+      const walkColumns = db.prepare("PRAGMA table_info(walks)").all();
+      for (const [name, type] of [["location_lat", "REAL"], ["location_lon", "REAL"], ["location_updated_at", "INTEGER"]]) {
+        if (!walkColumns.some(column => column.name === name)) db.exec(`ALTER TABLE walks ADD COLUMN ${name} ${type}`);
       }
       db.exec("COMMIT");
     } catch (error) {

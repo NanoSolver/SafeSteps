@@ -39,9 +39,12 @@ const checkIn = (() => {
     let current;
     let timer;
     let busy = false;
+    let locationTimer;
+    let locationBusy = false;
     function show(walk) {
       current = walk;
       clearTimeout(timer);
+      clearInterval(locationTimer);
       panel.removeAttribute("aria-busy");
       if (!walk) {
         panel.innerHTML = `<form class="stack" id="start-walk">
@@ -54,6 +57,7 @@ const checkIn = (() => {
       shareUrl.hash = "check-in/" + walk.token;
       panel.innerHTML = `<div class="check-summary" aria-live="polite">${summary(walk)}</div>
         <div class="stack">
+          ${walk.status === "arrived" ? "" : `<label class="location-share-option"><input type="checkbox" id="share-location" ${walk.locationSharing ? "checked" : ""}> Share my live location with this contact while the check-in is active</label><p class="muted">Your location updates while this page is open. It stops at arrival or when you end the walk.</p>`}
           <label>Private contact link<input id="contact-link" readonly value="${escapeHtml(shareUrl.href).replaceAll('"', "&quot;")}"></label>
           <button type="button" class="button secondary" data-action="copy">Copy contact link</button>
           ${walk.status === "arrived" ? "" : '<button type="button" class="button" data-action="arrive">I’m home</button>'}
@@ -63,6 +67,7 @@ const checkIn = (() => {
         </div>`;
       // Refresh the owner status at the deadline using the server's clock.
       if (walk.status === "walking") {
+        scheduleLocation();
         timer = setTimeout(async () => {
           try {
             const { walk: latest } = await api("/api/walk", { signal: controller.signal });
@@ -103,6 +108,21 @@ const checkIn = (() => {
       const minutes = Number(new FormData(event.target).get("minutes"));
       update("/api/walk", { minutes }, "Walk started. Share the contact link.", '[data-action="copy"]');
     });
+    async function pushLocation() {
+      if (locationBusy || controller.signal.aborted || !current || current.status === "arrived" ||
+          !panel.querySelector("#share-location")?.checked || !navigator.geolocation) return;
+      locationBusy = true;
+      navigator.geolocation.getCurrentPosition(async position => {
+        try { await api("/api/walk/location", { method: "POST", body: { id: current.id, lat: position.coords.latitude, lon: position.coords.longitude }, signal: controller.signal }); }
+        catch (error) { if (!controller.signal.aborted) message.textContent = error.message; }
+        finally { locationBusy = false; }
+      }, () => { locationBusy = false; message.textContent = "Location unavailable. Check location permission and keep sharing on to retry."; }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 12000 });
+    }
+    function scheduleLocation() {
+      clearInterval(locationTimer);
+      if (panel.querySelector("#share-location")?.checked) { pushLocation(); locationTimer = setInterval(pushLocation, 15000); }
+    }
+    panel.addEventListener("change", event => { if (event.target.id === "share-location") scheduleLocation(); });
     panel.addEventListener("click", async event => {
       const action = event.target.closest("[data-action]")?.dataset.action;
       if (!action || busy) return;
@@ -131,6 +151,7 @@ const checkIn = (() => {
     return () => {
       controller.abort();
       clearTimeout(timer);
+      clearInterval(locationTimer);
     };
   }
 
@@ -160,6 +181,14 @@ const checkIn = (() => {
           last = walk.status;
           status.innerHTML = summary(walk);
         }
+        if (walk.location && walk.status !== "arrived") {
+          let location = panel.querySelector("#contact-location");
+          if (!location) { location = document.createElement("div"); location.id = "contact-location"; panel.append(location); }
+          location.innerHTML = '<p><strong>Live location</strong></p><p class="muted" id="location-updated"></p><a class="button secondary" id="open-location" target="_blank" rel="noopener">View location</a>';
+          const age = Math.max(0, Math.floor((Date.now() - walk.location.updatedAt) / 1000));
+          location.querySelector("#location-updated").textContent = age < 10 ? "Updated just now" : `Updated ${age} seconds ago`;
+          location.querySelector("#open-location").href = `https://www.openstreetmap.org/?mlat=${walk.location.lat}&mlon=${walk.location.lon}#map=17/${walk.location.lat}/${walk.location.lon}`;
+        } else panel.querySelector("#contact-location")?.remove();
         connection.textContent = "";
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -178,6 +207,7 @@ const checkIn = (() => {
       refresh();
     } else {
       panel.removeAttribute("aria-busy");
+      panel.querySelector("#contact-location")?.remove();
       status.textContent = "This check-in link is invalid.";
     }
     return () => {

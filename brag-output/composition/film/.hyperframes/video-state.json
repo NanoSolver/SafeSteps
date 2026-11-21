@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "historyId": "9122e5d9-eea7-4588-bed7-f694296ba344",
+  "currentRevision": null,
+  "pendingChanges": false,
+  "files": {
+    "AGENTS.md": {
+      "hash": "729e31835a21c7b42ee006e2aacc63016abc05d26883f871ad3bf206943f2cfb",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\72\\729e31835a21c7b42ee006e2aacc63016abc05d26883f871ad3bf206943f2cfb"
+    },
+    "CLAUDE.md": {
+      "hash": "729e31835a21c7b42ee006e2aacc63016abc05d26883f871ad3bf206943f2cfb",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\72\\729e31835a21c7b42ee006e2aacc63016abc05d26883f871ad3bf206943f2cfb"
+    },
+    "assets/click.ogg": {
+      "hash": "2fa929138bc3a0f432696588f66eac94b8f6d463905ec8808c6461ce4b054292",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\2f\\2fa929138bc3a0f432696588f66eac94b8f6d463905ec8808c6461ce4b054292"
+    },
+    "assets/drop.ogg": {
+      "hash": "692ee3a6f1821402ca649ff735bee9591dc4846c8098fc7d6a90fd15fa57c1af",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\69\\692ee3a6f1821402ca649ff735bee9591dc4846c8098fc7d6a90fd15fa57c1af"
+    },
+    "assets/reveal.ogg": {
+      "hash": "7642a4fd43e547afe4f7adfadb3dabb681c0ff512f52c1674bae30a726841faf",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\76\\7642a4fd43e547afe4f7adfadb3dabb681c0ff512f52c1674bae30a726841faf"
+    },
+    "check-result.json": {
+      "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\e3\\e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "compositions/checkin.html": {
+      "hash": "76c8aa778f283d5757b5fe1126c682d991b6f6ab9f46cea2d8ad230cfbeb7b79",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\76\\76c8aa778f283d5757b5fe1126c682d991b6f6ab9f46cea2d8ad230cfbeb7b79"
+    },
+    "compositions/hazards.html": {
+      "hash": "18e2fcb6dbe8d770fe73350b984870307ee896c846c75ae01c37573d96fd55d9",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\18\\18e2fcb6dbe8d770fe73350b984870307ee896c846c75ae01c37573d96fd55d9"
+    },
+    "compositions/hook.html": {
+      "hash": "60b23e68530647faf5deca84531007ec4a4213d2351b0b41d3161f11e68c1037",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\60\\60b23e68530647faf5deca84531007ec4a4213d2351b0b41d3161f11e68c1037"
+    },
+    "compositions/outro.html": {
+      "hash": "0f1918e94437cc0413d80256f7de7e0b9f391dc7899d7fbe3fe4a9c0de8cbd2b",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\0f\\0f1918e94437cc0413d80256f7de7e0b9f391dc7899d7fbe3fe4a9c0de8cbd2b"
+    },
+    "compositions/routes.html": {
+      "hash": "42a8e6d17a1c64a89992f39138b2615bc5db9f6fbe5feaa504ac53a46b3038a1",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\42\\42a8e6d17a1c64a89992f39138b2615bc5db9f6fbe5feaa504ac53a46b3038a1"
+    },
+    "hyperframes.json": {
+      "hash": "3af6ecb4d7f8c0cf28a50880f71291f27406c4548e5db2ea2d57430abd99e0e1",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\3a\\3af6ecb4d7f8c0cf28a50880f71291f27406c4548e5db2ea2d57430abd99e0e1"
+    },
+    "index.html": {
+      "hash": "877c869e30bd6fe8b511f3b61108aeb8a0c86b81831d00fceb72bcb80f2c791b",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\87\\877c869e30bd6fe8b511f3b61108aeb8a0c86b81831d00fceb72bcb80f2c791b"
+    },
+    "meta.json": {
+      "hash": "c7d23bd1f12c8375955e0270a8d1bc88d916c11337f7137c72158f78d9e7b2cf",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\c7\\c7d23bd1f12c8375955e0270a8d1bc88d916c11337f7137c72158f78d9e7b2cf"
+    },
+    "package.json": {
+      "hash": "8245bc67309b50bf713b3fdfca4ead70ae4232272ed1e692a55f7801ad61b03d",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\82\\8245bc67309b50bf713b3fdfca4ead70ae4232272ed1e692a55f7801ad61b03d"
+    },
+    "assets/music.mp3": {
+      "hash": "5888d4bd2ba0119b87a94e502ae2cc401c08192945cc5e5c2f8e8a33aa47a0a1",
+      "content": "C:\\Users\\parik\\.cache\\hyperframes\\history\\9122e5d9-eea7-4588-bed7-f694296ba344\\blobs\\58\\5888d4bd2ba0119b87a94e502ae2cc401c08192945cc5e5c2f8e8a33aa47a0a1"
+    }
+  },
+  "revisions": {},
+  "checks": {
+    "latest": {
+      "revision": null,
+      "id": "ee41640a-5d5c-4a4d-8182-c3888292d456"
+    },
+    "revisions": {},
+    "unversioned": [
+      {
+        "id": "ee41640a-5d5c-4a4d-8182-c3888292d456",
+        "scope": "project",
+        "report": "C:\\Users\\parik\\OneDrive\\Documents\\ChatGPT\\college idt\\brag-output\\composition\\film\\.hyperframes\\artifacts\\checks\\ee41640a-5d5c-4a4d-8182-c3888292d456.json",
+        "metadata": {
+          "ok": false,
+          "browserSkipped": false,
+          "options": {
+            "samples": 9,
+            "atTransitions": false,
+            "maxIssues": 80,
+            "collapseStatic": true,
+            "tolerance": 2,
+            "timeout": 45000,
+            "cache": true,
+            "contrast": true,
+            "craft": true,
+            "strict": false,
+            "snapshots": false,
+            "safeZones": [
+              "tiktok",
+              "reels",
+              "shorts"
+            ],
+            "browserGpuMode": "auto",
+            "includeUnmounted": false
+          }
+        },
+        "createdAt": 1795153670204,
+        "contentHash": "e3865b6e6d66d336910163ea400c72a6c54924f43a3cea2f83d723ea76bf873f",
+        "revision": null,
+        "inputFingerprint": "8564b494943ab2b27348a108e953e5765bf4e70072a1ad06c1608605c07785ff",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      }
+    ]
+  },
+  "snapshots": {
+    "latest": null,
+    "revisions": {},
+    "unversioned": []
+  }
+}

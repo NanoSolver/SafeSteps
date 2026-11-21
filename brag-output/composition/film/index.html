@@ -1,0 +1,15 @@
+<!doctype html><html data-composition-variables='[{"id":"product","type":"string","label":"Product name","default":"SafeSteps"},{"id":"color-ground","type":"color","label":"Mint","default":"#e3f1e9"},{"id":"color-accent","type":"color","label":"Forest","default":"#2c624b"}]'>
+<head><meta charset="utf-8"><title>SafeSteps — the walk home</title><script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+<style>*{box-sizing:border-box}html,body{margin:0;width:1920px;height:1080px;overflow:hidden}#root{position:absolute;inset:0}.clip[data-composition-src]{position:absolute;inset:0}</style></head>
+<body><div id="root" data-composition-id="main" data-start="0" data-duration="22" data-width="1920" data-height="1080" data-fps="30">
+<div id="hook" class="clip" data-composition-id="hook" data-composition-src="compositions/hook.html" data-start="0" data-duration="3.3" data-width="1920" data-height="1080" data-track-index="1" data-track-kind="graphics"></div>
+<div id="routes" class="clip" data-composition-id="routes" data-composition-src="compositions/routes.html" data-start="3.3" data-duration="6" data-width="1920" data-height="1080" data-track-index="1" data-track-kind="graphics"></div>
+<div id="hazards" class="clip" data-composition-id="hazards" data-composition-src="compositions/hazards.html" data-start="9.3" data-duration="4.4" data-width="1920" data-height="1080" data-track-index="1" data-track-kind="graphics"></div>
+<div id="checkin" class="clip" data-composition-id="checkin" data-composition-src="compositions/checkin.html" data-start="13.7" data-duration="4.9" data-width="1920" data-height="1080" data-track-index="1" data-track-kind="graphics"></div>
+<div id="outro" class="clip" data-composition-id="outro" data-composition-src="compositions/outro.html" data-start="18.6" data-duration="3.4" data-width="1920" data-height="1080" data-track-index="1" data-track-kind="graphics"></div>
+<audio id="music" class="clip" data-start="0" data-duration="22" data-track-index="10" data-volume="0.30" data-fade-in="0.4" data-fade-out="1.8" src="assets/music.mp3"></audio>
+<audio id="reveal" class="clip" data-start="3.3" data-duration="0.3" data-track-index="11" data-volume="0.55" src="assets/reveal.ogg"></audio>
+<audio id="route-click" class="clip" data-start="6.56" data-duration="0.15" data-track-index="11" data-volume="0.55" src="assets/click.ogg"></audio>
+<audio id="pin-drop" class="clip" data-start="9.5" data-duration="0.4" data-track-index="11" data-volume="0.45" src="assets/drop.ogg"></audio>
+<audio id="home-click" class="clip" data-start="17.15" data-duration="0.15" data-track-index="11" data-volume="0.6" src="assets/click.ogg"></audio>
+</div><script>window.__timelines=window.__timelines||{};window.__timelines.main=gsap.timeline({paused:true});</script></body></html>

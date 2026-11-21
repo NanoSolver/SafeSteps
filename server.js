@@ -167,7 +167,7 @@ function createApp({ database = ":memory:", store, now = Date.now, secureCookie 
 
   async function latestWalk(id) {
     const row = await db.get("SELECT * FROM walks WHERE account_id = ? ORDER BY id DESC LIMIT 1", id);
-    return row && row.revoked_at === null && row.expires_at > now() ? row : null;
+    return row && row.revoked_at === null && row.arrived_at === null && row.expires_at > now() ? row : null;
   }
 
   function ownerWalk(row) {
@@ -238,7 +238,9 @@ function createApp({ database = ":memory:", store, now = Date.now, secureCookie 
           WHERE share_token = ? AND revoked_at IS NULL AND walks.expires_at > ?
         `, token, now());
         if (!row) throw new HttpError(404, "This check-in link has expired or was closed.");
-        return json(res, 200, { ...publicWalk(row), displayName: row.display_name });
+        const fresh = row.location_updated_at && now() - row.location_updated_at <= 60000;
+        return json(res, 200, { ...publicWalk(row), displayName: row.display_name,
+          location: fresh ? { lat: row.location_lat, lon: row.location_lon, updatedAt: row.location_updated_at } : null });
       }
       if (!user) throw new HttpError(401, "Sign in to continue.");
       if (post && path === "/api/logout") {
@@ -261,6 +263,15 @@ function createApp({ database = ":memory:", store, now = Date.now, secureCookie 
         `, user.id, randomBytes(32).toString("hex"), time, due, due + 24 * hour);
         if (!row) throw new HttpError(409, "Finish or close your current walk before starting another.");
         return json(res, 201, { walk: ownerWalk(row) });
+      }
+      if (post && path === "/api/walk/location") {
+        const { id, lat, lon } = await readJson(req);
+        if (!Number.isSafeInteger(id) || !coordinate({ lat, lon })) throw new HttpError(400, "Choose a valid location.");
+        const result = await db.run(`UPDATE walks SET location_lat = ?, location_lon = ?, location_updated_at = ?
+          WHERE id = ? AND account_id = ? AND revoked_at IS NULL AND arrived_at IS NULL AND expires_at > ?`,
+        lat, lon, now(), id, user.id, now());
+        if (!result.changes) throw new HttpError(409, "Location sharing has ended.");
+        return json(res, 200, {});
       }
       const walkAction = /^\/api\/walk\/(\d+)\/(arrive|close)$/.exec(path);
       if (post && walkAction) {

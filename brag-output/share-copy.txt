@@ -1,0 +1,3 @@
+Built SafeSteps for the walk home. Compare walking routes, flag street hazards, and share an arrival check-in with someone you trust. Bengaluru pilot, with our area survey still ahead.
+
+https://safesteps-smoky.vercel.app/
