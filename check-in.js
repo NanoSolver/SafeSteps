@@ -41,6 +41,7 @@ const checkIn = (() => {
     let busy = false;
     let locationTimer;
     let locationBusy = false;
+    let locationWrite = Promise.resolve();
     function show(walk) {
       current = walk;
       clearTimeout(timer);
@@ -112,15 +113,28 @@ const checkIn = (() => {
       if (locationBusy || controller.signal.aborted || !current || current.status === "arrived" ||
           !panel.querySelector("#share-location")?.checked || !navigator.geolocation) return;
       locationBusy = true;
+      const walkId = current.id;
       navigator.geolocation.getCurrentPosition(async position => {
-        try { await api("/api/walk/location", { method: "POST", body: { id: current.id, lat: position.coords.latitude, lon: position.coords.longitude }, signal: controller.signal }); }
+        try {
+          if (current?.id !== walkId || !panel.querySelector("#share-location")?.checked) return;
+          locationWrite = api("/api/walk/location", { method: "POST", body: { id: walkId, lat: position.coords.latitude, lon: position.coords.longitude }, signal: controller.signal });
+          await locationWrite;
+        }
         catch (error) { if (!controller.signal.aborted) message.textContent = error.message; }
         finally { locationBusy = false; }
       }, () => { locationBusy = false; message.textContent = "Location unavailable. Check location permission and keep sharing on to retry."; }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 12000 });
     }
     function scheduleLocation() {
       clearInterval(locationTimer);
-      if (panel.querySelector("#share-location")?.checked) { pushLocation(); locationTimer = setInterval(pushLocation, 15000); }
+      if (panel.querySelector("#share-location")?.checked) {
+        if (!navigator.geolocation) message.textContent = "This browser does not support location sharing.";
+        else { message.textContent = "Requesting your location permission…"; pushLocation(); locationTimer = setInterval(pushLocation, 15000); }
+      } else if (current && current.status !== "arrived") {
+        locationWrite = locationWrite.catch(() => {}).then(() => api("/api/walk/location", {
+          method: "POST", body: { id: current.id, share: false }, signal: controller.signal
+        })).then(() => { if (!controller.signal.aborted) message.textContent = "Live location sharing is off."; })
+          .catch(error => { if (!controller.signal.aborted) message.textContent = error.message; });
+      }
     }
     panel.addEventListener("change", event => { if (event.target.id === "share-location") scheduleLocation(); });
     panel.addEventListener("click", async event => {

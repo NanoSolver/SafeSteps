@@ -89,6 +89,8 @@ button:disabled { cursor: default; opacity: .6; }
 .check-card > .button { margin-top: 12px; }
 .check-card .stack:first-child { margin-top: 0; }
 .check-card .muted, .check-shell > .muted { font-size: .93rem; }
+.check-card .location-share-option { display: flex; align-items: flex-start; gap: 10px; line-height: 1.45; }
+.check-card .location-share-option input { width: auto; flex: 0 0 auto; margin: .25rem 0 0; }
 .check-state { display: inline-block; border-radius: 7px; padding: 5px 10px; color: var(--green); background: var(--mint); font-weight: 700; }
 .check-state[data-status="overdue"] { color: #791e13; background: #f9e1dc; }
 .check-time, #walker:not(:empty) { margin-bottom: 12px; }

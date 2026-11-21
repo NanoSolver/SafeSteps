@@ -83,8 +83,16 @@ test("private check-ins progress, survive restart, and can be revoked by the own
     assert.equal((await walker("/api/walk", post({ minutes: 2 }))).status, 409);
     assert.equal((await contact("/api/contact")).status, 404);
     assert.deepEqual((await contact("/api/contact", { token })).body, {
-      status: "walking", displayName: "Test Walker", dueAt, arrivedAt: null
+      status: "walking", displayName: "Test Walker", dueAt, arrivedAt: null, location: null
     });
+    assert.equal(started.body.walk.locationSharing, false);
+    assert.equal((await walker("/api/walk/location", post({ id, lat: 99, lon: 77 }))).status, 400);
+    assert.equal((await walker("/api/walk/location", post({ id, lat: 12.9716, lon: 77.5946 }))).status, 200);
+    const live = (await contact("/api/contact", { token })).body.location;
+    assert.deepEqual({ lat: live.lat, lon: live.lon }, { lat: 12.9716, lon: 77.5946 });
+    assert.equal((await walker("/api/walk", { method: "GET" })).body.walk.locationSharing, true);
+    assert.equal((await walker("/api/walk/location", post({ id, share: false }))).status, 200);
+    assert.equal((await contact("/api/contact", { token })).body.location, null);
     assert.equal((await contact("/api/register", post({ ...credentials, username: "other" }))).status, 201);
     assert.equal((await contact(`/api/walk/${id}/arrive`, post())).status, 404);
     assert.equal((await contact(`/api/walk/${id}/close`, post())).status, 404);
@@ -95,8 +103,11 @@ test("private check-ins progress, survive restart, and can be revoked by the own
     const previousSession = registered.headers["set-cookie"].split(";")[0];
     const returningWalker = client(app, previousSession);
     assert.equal((await returningWalker("/api/walk")).body.walk.status, "overdue");
+    assert.equal((await returningWalker("/api/walk/location", post({ id, lat: 12.9716, lon: 77.5946 }))).status, 200);
     const arrived = await returningWalker(`/api/walk/${id}/arrive`, post());
     assert.equal(arrived.body.walk.status, "arrived");
+    assert.equal((await returningWalker("/api/walk")).body.walk.status, "arrived");
+    assert.equal((await client(app)("/api/contact", { token })).body.location, null);
     time += 1000;
     const retried = await returningWalker(`/api/walk/${id}/arrive`, post());
     assert.equal(retried.body.walk.arrivedAt, arrived.body.walk.arrivedAt);

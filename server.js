@@ -167,11 +167,12 @@ function createApp({ database = ":memory:", store, now = Date.now, secureCookie 
 
   async function latestWalk(id) {
     const row = await db.get("SELECT * FROM walks WHERE account_id = ? ORDER BY id DESC LIMIT 1", id);
-    return row && row.revoked_at === null && row.arrived_at === null && row.expires_at > now() ? row : null;
+    return row && row.revoked_at === null && row.expires_at > now() ? row : null;
   }
 
   function ownerWalk(row) {
-    return row ? { ...publicWalk(row), id: row.id, token: row.share_token, expiresAt: row.expires_at } : null;
+    const locationSharing = Boolean(row?.location_updated_at && now() - row.location_updated_at <= 60000 && row.arrived_at === null);
+    return row ? { ...publicWalk(row), id: row.id, token: row.share_token, expiresAt: row.expires_at, locationSharing } : null;
   }
 
   function communityLocation(row) {
@@ -238,7 +239,7 @@ function createApp({ database = ":memory:", store, now = Date.now, secureCookie 
           WHERE share_token = ? AND revoked_at IS NULL AND walks.expires_at > ?
         `, token, now());
         if (!row) throw new HttpError(404, "This check-in link has expired or was closed.");
-        const fresh = row.location_updated_at && now() - row.location_updated_at <= 60000;
+        const fresh = row.arrived_at === null && row.location_updated_at && now() - row.location_updated_at <= 60000;
         return json(res, 200, { ...publicWalk(row), displayName: row.display_name,
           location: fresh ? { lat: row.location_lat, lon: row.location_lon, updatedAt: row.location_updated_at } : null });
       }
@@ -265,8 +266,14 @@ function createApp({ database = ":memory:", store, now = Date.now, secureCookie 
         return json(res, 201, { walk: ownerWalk(row) });
       }
       if (post && path === "/api/walk/location") {
-        const { id, lat, lon } = await readJson(req);
-        if (!Number.isSafeInteger(id) || !coordinate({ lat, lon })) throw new HttpError(400, "Choose a valid location.");
+        const { id, lat, lon, share = true } = await readJson(req);
+        if (!Number.isSafeInteger(id) || typeof share !== "boolean" || (share && !coordinate({ lat, lon }))) throw new HttpError(400, "Choose a valid location.");
+        if (!share) {
+          const result = await db.run(`UPDATE walks SET location_lat = NULL, location_lon = NULL, location_updated_at = NULL
+            WHERE id = ? AND account_id = ? AND revoked_at IS NULL AND arrived_at IS NULL AND expires_at > ?`, id, user.id, now());
+          if (!result.changes) throw new HttpError(409, "Location sharing has ended.");
+          return json(res, 200, {});
+        }
         const result = await db.run(`UPDATE walks SET location_lat = ?, location_lon = ?, location_updated_at = ?
           WHERE id = ? AND account_id = ? AND revoked_at IS NULL AND arrived_at IS NULL AND expires_at > ?`,
         lat, lon, now(), id, user.id, now());
@@ -280,12 +287,14 @@ function createApp({ database = ":memory:", store, now = Date.now, secureCookie 
         const row = await db.get("SELECT * FROM walks WHERE id = ? AND account_id = ? AND expires_at > ?", id, user.id, time);
         if (!row) throw new HttpError(404, "Walk not found.");
         if (walkAction[2] === "close") {
-          await db.run("UPDATE walks SET revoked_at = COALESCE(revoked_at, ?) WHERE id = ?", time, id);
+          await db.run(`UPDATE walks SET revoked_at = COALESCE(revoked_at, ?), location_lat = NULL, location_lon = NULL,
+            location_updated_at = NULL WHERE id = ?`, time, id);
           return json(res, 200, { walk: null });
         }
         if (row.revoked_at !== null) throw new HttpError(409, "This walk is closed.");
         const arrived = await db.get(
-          "UPDATE walks SET arrived_at = COALESCE(arrived_at, ?) WHERE id = ? AND revoked_at IS NULL RETURNING *",
+          `UPDATE walks SET arrived_at = COALESCE(arrived_at, ?), location_lat = NULL, location_lon = NULL,
+            location_updated_at = NULL WHERE id = ? AND revoked_at IS NULL RETURNING *`,
           time, id
         );
         if (!arrived) throw new HttpError(409, "This walk is closed.");
