@@ -12,6 +12,14 @@ const schema = [
     token_hash TEXT PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id),
     expires_at INTEGER NOT NULL
   ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS recovery_codes (
+    account_id INTEGER PRIMARY KEY REFERENCES accounts(id), token_hash TEXT NOT NULL
+  ) STRICT`,
+  `CREATE TRIGGER IF NOT EXISTS reset_password_security AFTER UPDATE OF password_hash ON accounts
+  BEGIN
+    DELETE FROM sessions WHERE account_id = NEW.id;
+    DELETE FROM recovery_codes WHERE account_id = NEW.id;
+  END`,
   `CREATE TABLE IF NOT EXISTS walks (
     id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id),
     share_token TEXT NOT NULL UNIQUE, started_at INTEGER NOT NULL, due_at INTEGER NOT NULL,

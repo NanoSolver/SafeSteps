@@ -51,7 +51,7 @@ function nav(page, profile) {
       <a href="#map"${current("map")}>♧ &nbsp;Plan a walk</a>
       <a href="#havens"${current("havens")}>♢ &nbsp;Safe Havens</a>
       <a href="#walk"${current("walk")}>Check-in</a>`}</nav>
-    ${profile ? '<button class="button account" id="sign-out">Sign out</button>' : '<a class="button account" href="#auth">♙ &nbsp;Sign in</a>'}
+    ${profile ? '<div class="account"><a class="text-link" href="#auth">Account</a> &nbsp; <button class="button" id="sign-out">Sign out</button></div>' : '<a class="button account" href="#auth">♙ &nbsp;Sign in</a>'}
   </div>`;
   header.querySelector("#sign-out")?.addEventListener("click", async event => {
     const button = event.currentTarget;
@@ -139,7 +139,31 @@ function about() {
 
 function auth(account) {
   if (account) {
-    main.innerHTML = `<section class="auth"><h1>Your account</h1><p>Signed in as ${escapeHtml(account.displayName)}.</p><div class="stack"><a class="button" href="#walk">Walk check-in</a></div></section>`;
+    main.innerHTML = `<section class="auth"><h1>Your account</h1><p>Signed in as ${escapeHtml(account.displayName)}.</p>
+      <h2 style="margin-top:24px">Password recovery</h2><p>Save a recovery code now so you can reset a forgotten password. Generating a code replaces your previous code.</p>
+      <form class="stack" id="recovery-setup"><label>Current password<input name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
+      <button class="button">Generate recovery code</button><p role="status"></p></form>
+      <div id="saved-code" hidden><p>Save this code in your password manager. It is shown only here and can be used once.</p><input aria-label="Recovery code" readonly spellcheck="false"><p>After resetting your password, sign in and generate a new code.</p></div>
+      <div class="stack"><a class="button" href="#walk">Walk check-in</a></div></section>`;
+    const form = main.querySelector("#recovery-setup");
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = form.querySelector("button");
+      button.disabled = true;
+      form.querySelector('[role="status"]').textContent = "";
+      main.querySelector("#saved-code").hidden = true;
+      try {
+        const { code } = await api("/api/recovery-code", { method: "POST", body: { password: form.elements.password.value } });
+        if (!form.isConnected) return;
+        form.reset();
+        const panel = main.querySelector("#saved-code");
+        panel.hidden = false;
+        panel.querySelector("input").value = code;
+        panel.querySelector("input").focus();
+        panel.querySelector("input").select();
+      } catch (error) { form.querySelector('[role="status"]').textContent = error.message; }
+      finally { button.disabled = false; }
+    });
     return;
   }
   let register = false;
@@ -153,9 +177,11 @@ function auth(account) {
         ${register ? '<p class="muted status">Use at least 10 characters for your password.</p>' : ""}
         <button class="button" type="submit">${register ? "Create account" : "Sign in"}</button>
         <button class="quiet-button" type="button" id="auth-toggle">${register ? "Already have an account? Sign in" : "New here? Create an account"}</button>
+        ${register ? "" : '<button class="quiet-button" type="button" id="forgot-password">Forgot password?</button>'}
         <p class="status" role="status"></p>
       </form></section>`;
     const form = main.querySelector("form");
+    form.querySelector("#forgot-password")?.addEventListener("click", forgotPassword);
     form.querySelector("#auth-toggle").addEventListener("click", () => {
       register = !register;
       show();
@@ -171,6 +197,7 @@ function auth(account) {
           method: "POST", body: Object.fromEntries(new FormData(form))
         });
         setProfile(signedIn);
+        if (register && form.isConnected) { nav("auth", signedIn); auth(signedIn); return; }
         if (form.isConnected) {
           const next = history.state?.returnTo;
           location.hash = ["map", "havens", "walk"].includes(next) ? next : "map";
@@ -185,6 +212,35 @@ function auth(account) {
     });
   }
   show();
+}
+
+function forgotPassword() {
+  main.innerHTML = `<section class="auth"><h1>Reset your password</h1>
+    <p>Enter your username and the recovery code you saved from Account settings.</p>
+    <form class="stack"><label>Username<input name="username" autocomplete="username" maxlength="32" required></label>
+      <label>Recovery code<input name="code" autocomplete="off" spellcheck="false" maxlength="64" required></label>
+      <label>New password<input name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label>
+      <label>Confirm new password<input name="confirm" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label>
+      <button class="button">Reset password</button><p role="status"></p></form>
+    <p class="muted" style="margin-top:18px">No saved code? If you still know your password, sign in and generate one in Account. Without a saved code, this app cannot recover access.</p>
+    <button class="quiet-button" id="back-to-login">Back to sign in</button></section>`;
+  main.querySelector("#back-to-login").addEventListener("click", () => auth(null));
+  const form = main.querySelector("form");
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const status = form.querySelector('[role="status"]');
+    if (form.elements.password.value !== form.elements.confirm.value) { status.textContent = "Passwords do not match."; return; }
+    const button = form.querySelector("button");
+    button.disabled = true;
+    try {
+      await api("/api/password/reset", { method: "POST", body: { username: form.elements.username.value, code: form.elements.code.value, password: form.elements.password.value } });
+      if (!form.isConnected) return;
+      setProfile(null);
+      form.reset();
+      status.textContent = "Password reset. Sign in with your new password, then save a new recovery code.";
+    } catch (error) { status.textContent = error.message; }
+    finally { button.disabled = false; }
+  });
 }
 
 function havens(profile) {

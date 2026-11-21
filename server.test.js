@@ -41,6 +41,28 @@ function client(app, session = "") {
 const post = data => ({ method: "POST", data });
 const credentials = { username: "walker", displayName: "Test Walker", password: "demo-password-only" };
 
+test("recovery requires proof, rotates codes, consumes them once and revokes sessions", async () => {
+  const app = createApp();
+  try {
+    const owner = client(app), otherSession = client(app), reset = client(app);
+    await owner("/api/register", post(credentials));
+    await otherSession("/api/login", post(credentials));
+    assert.equal((await reset("/api/recovery-code", post({ password: credentials.password }))).status, 401);
+    assert.equal((await owner("/api/recovery-code", post({ password: "incorrect" }))).status, 400);
+    const first = (await owner("/api/recovery-code", post({ password: credentials.password }))).body.code;
+    const code = (await owner("/api/recovery-code", post({ password: credentials.password }))).body.code;
+    assert.match(code, /^[a-f0-9]{48}$/);
+    const body = { username: credentials.username, password: "a-new-password-123", code };
+    assert.equal((await reset("/api/password/reset", post({ ...body, code: first }))).status, 400);
+    assert.equal((await reset("/api/password/reset", post(body))).status, 200);
+    assert.equal((await otherSession("/api/session")).body.account, null);
+    assert.equal((await owner("/api/session")).body.account, null);
+    assert.equal((await reset("/api/password/reset", post(body))).status, 400);
+    assert.equal((await reset("/api/login", post(credentials))).status, 401);
+    assert.equal((await reset("/api/login", post({ ...credentials, password: body.password }))).status, 200);
+  } finally { app.close(); }
+});
+
 test("private check-ins progress, survive restart, and can be revoked by the owner", async () => {
   const dir = mkdtempSync(join(tmpdir(), "safestride-test-"));
   const database = join(dir, "test.sqlite");

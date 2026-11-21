@@ -57,6 +57,8 @@ const streetMap = (() => {
     let routeRequest;
     let searchRequest;
     let searchKey;
+    let searchTimer;
+    let lastSearchAt = 0;
     let locateVersion = 0;
     const inputs = {};
     const tools = {};
@@ -73,7 +75,7 @@ const streetMap = (() => {
           ${["from", "to"].map((key, i) => `<form class="address-row" data-address="${key}">
             <span class="waypoint-icon ${key}" aria-hidden="true">${i ? "B" : "A"}</span>
             <label class="sr-only" for="address-${key}">${labels[key]}</label>
-            <input id="address-${key}" name="query" placeholder="${key === "from" ? "Choose starting point" : "Search for a destination"}" maxlength="160" autocomplete="off">
+            <input id="address-${key}" name="query" placeholder="${key === "from" ? "Choose starting point" : "Search for a destination"}" maxlength="160" autocomplete="off" aria-controls="search-results" aria-expanded="false">
             <button class="plain-control search-control" type="submit" aria-label="Search for ${labels[key].toLowerCase()}">Search</button>
           </form>`).join("")}
           <div class="map-actions">
@@ -82,7 +84,7 @@ const streetMap = (() => {
             <button type="button" class="plain-control" data-pin="to" aria-pressed="false">Pin destination</button>
             <button type="button" class="plain-control" id="swap" aria-label="Swap start and destination">⇅ Swap</button>
           </div>
-          <p class="map-privacy">Searches and route points go to our map providers. You can also use a nearby public landmark.</p>
+          <p class="map-privacy">As you type, search text goes to our map provider for suggestions. Route points are sent when you request directions. You can also use a nearby public landmark.</p>
           <div id="search-results"></div>
           <button type="button" class="button directions-button" id="find-walk">Find walking routes</button>
           <p id="map-status" class="status" role="status"></p>
@@ -121,10 +123,12 @@ const streetMap = (() => {
     }
 
     function stopSearch() {
+      clearTimeout(searchTimer);
       searchRequest?.abort();
       searchRequest = null;
       if (searchKey) tools[searchKey].disabled = false;
       searchResults.replaceChildren();
+      for (const input of Object.values(inputs)) input.setAttribute("aria-expanded", "false");
     }
 
     function clearRoute() {
@@ -255,6 +259,20 @@ const streetMap = (() => {
         list.append(item);
       }
       searchResults.append(list);
+      get(`[data-address="${key}"]`).after(searchResults);
+      inputs[key].setAttribute("aria-expanded", "true");
+      list.addEventListener("keydown", event => {
+        const buttons = [...list.querySelectorAll("button")];
+        const index = buttons.indexOf(document.activeElement);
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          event.preventDefault();
+          buttons[(index + (event.key === "ArrowDown" ? 1 : buttons.length - 1)) % buttons.length].focus();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          stopSearch();
+          inputs[key].focus();
+        }
+      });
       status.textContent = `${results.length} ${results.length === 1 ? "match" : "matches"}. Choose a result.`;
     }
 
@@ -268,6 +286,20 @@ const streetMap = (() => {
           paintPins();
         }
         status.textContent = "";
+        if (inputs[key].value.trim().length >= 2) {
+          searchTimer = setTimeout(() => get(`[data-address="${key}"]`).requestSubmit(), 650);
+        }
+      });
+      inputs[key].addEventListener("focus", () => {
+        if (searchKey && searchKey !== key) stopSearch();
+        searchKey = key;
+      });
+      inputs[key].addEventListener("keydown", event => {
+        if (event.key === "Escape") { stopSearch(); status.textContent = ""; }
+        if (event.key === "ArrowDown" && searchResults.querySelector("button")) {
+          event.preventDefault();
+          searchResults.querySelector("button").focus();
+        }
       });
       get(`[data-address="${key}"]`).addEventListener("submit", async event => {
         event.preventDefault();
@@ -288,6 +320,13 @@ const streetMap = (() => {
           status.textContent = "Enter an address or place name.";
           return;
         }
+        // Preserve the public geocoder's existing request spacing across both inputs.
+        const wait = 1200 - (Date.now() - lastSearchAt);
+        if (wait > 0) {
+          searchTimer = setTimeout(() => get(`[data-address="${key}"]`).requestSubmit(), wait);
+          return;
+        }
+        lastSearchAt = Date.now();
         const view = map?.getCenter().wrap();
         const near = view ? { lat: view.lat, lon: view.lng } : { lat: centre[0], lon: centre[1] };
         const controller = new AbortController();
@@ -305,6 +344,11 @@ const streetMap = (() => {
         }
       });
     }
+
+    document.addEventListener("pointerdown", event => {
+      if (!searchResults.contains(event.target) && !Object.values(inputs).includes(event.target) &&
+          !event.target.closest?.("[data-address]")) stopSearch();
+    }, { signal: page.signal });
 
     walkingButton.addEventListener("click", async () => {
       if (!endpoints.from || !endpoints.to) {
@@ -521,6 +565,7 @@ const streetMap = (() => {
     resize.observe(get(".map-stage"));
     return () => {
       page.abort();
+      clearTimeout(searchTimer);
       routeRequest?.abort();
       searchRequest?.abort();
       resize.disconnect();

@@ -92,7 +92,7 @@ function createApp({ database = ":memory:", store, now = Date.now, secureCookie 
     `, hash(token), now()) ?? null;
   }
 
-  async function authenticate(req, res, register) {
+  function limitAuth(req) {
     const ip = req.socket.remoteAddress;
     const time = now();
     for (const [key, entry] of attempts) {
@@ -102,6 +102,28 @@ function createApp({ database = ":memory:", store, now = Date.now, secureCookie 
     const entry = attempts.get(ip) ?? { count: 0, until: time + 15 * 60 * 1000 };
     if (++entry.count > 20) throw new HttpError(429, "Too many sign-in attempts. Try again later.");
     attempts.set(ip, entry);
+  }
+
+  async function recover(req, res) {
+    limitAuth(req);
+    const body = await readJson(req);
+    const username = text(body.username, 32).toLowerCase();
+    const code = text(body.code, 64).toLowerCase();
+    const password = typeof body.password === "string" ? body.password : "";
+    if (password.length < 10 || password.length > 128) throw new HttpError(400, "Use a 10–128 character password.");
+    const salt = randomBytes(16).toString("hex");
+    const passwordHash = (await derive(password, salt, 64)).toString("hex");
+    // One conditional write consumes the code and revokes sessions via the trigger.
+    const updated = await db.get(`UPDATE accounts SET salt = ?, password_hash = ?
+      WHERE username = ? AND id IN (SELECT account_id FROM recovery_codes WHERE token_hash = ?)
+      RETURNING id`, salt, passwordHash, username, hash(code));
+    if (!updated) throw new HttpError(400, "Username or recovery code is incorrect, or the code was already used.");
+    setSessionCookie(res, "", 0);
+    json(res, 200, { ok: true });
+  }
+
+  async function authenticate(req, res, register) {
+    limitAuth(req);
 
     const body = await readJson(req);
     const username = text(body.username, 32).toLowerCase();
@@ -180,9 +202,24 @@ function createApp({ database = ":memory:", store, now = Date.now, secureCookie 
       }
       if (post && path === "/api/register") return await authenticate(req, res, true);
       if (post && path === "/api/login") return await authenticate(req, res, false);
+      if (post && path === "/api/password/reset") return await recover(req, res);
       if (post && path === "/api/map/search") return json(res, 200, { results: await maps.search(await readJson(req)) });
       if (post && path === "/api/map/walk") return json(res, 200, { routes: await maps.walking(await readJson(req)) });
       const user = await account(req);
+      if (post && path === "/api/recovery-code") {
+        if (!user) throw new HttpError(401, "Sign in first.");
+        limitAuth(req);
+        const body = await readJson(req);
+        const row = await db.get("SELECT * FROM accounts WHERE id = ?", user.id);
+        const password = typeof body.password === "string" ? body.password : "";
+        if (password.length > 128) throw new HttpError(400, "Password is incorrect.");
+        const candidate = await derive(password, row.salt, 64);
+        if (!timingSafeEqual(candidate, Buffer.from(row.password_hash, "hex"))) throw new HttpError(400, "Password is incorrect.");
+        const code = randomBytes(24).toString("hex");
+        await db.run(`INSERT INTO recovery_codes (account_id, token_hash) VALUES (?, ?)
+          ON CONFLICT(account_id) DO UPDATE SET token_hash = excluded.token_hash`, user.id, hash(code));
+        return json(res, 200, { code });
+      }
       if (get && path === "/api/session") return json(res, 200, { account: user });
       if (get && path === "/api/community") {
         const reports = await db.all(`
